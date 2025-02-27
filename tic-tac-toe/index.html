@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic Tac Toe Masterpiece</title>
+  <style>
+    /* Base & Resets */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow-x: hidden;
+    }
+    /* Wood-ish Background with Fallback Themes */
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #deb887;
+      background-image: repeating-linear-gradient(45deg, #deb887, #deb887 10px, #d2b48c 10px, #d2b48c 20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background 0.3s ease, color 0.3s ease;
+      padding: 10px;
+    }
+    /* Dark Mode Overrides */
+    body.dark-mode {
+      background: #2c2c2c;
+      color: #eee;
+    }
+    /* (Removed button:active rule so buttons don't shrink) */
+    
+    /* Startup Modal */
+    #startupModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      padding: 20px;
+      text-align: center;
+      z-index: 100;
+      width: 80%;
+      max-width: 400px;
+    }
+    #startupModal h2 {
+      margin-bottom: 10px;
+      font-size: 1.6rem;
+    }
+    #startupModal p {
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+    #startupModal button {
+      margin: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background: #667eea;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #startupModal button:hover {
+      background: #5a67d8;
+    }
+    /* Side Drawer for Settings */
+    #sideDrawer {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 320px;
+      height: 100%;
+      background: #fff;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+      transition: right 0.3s ease;
+      z-index: 200;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #sideDrawer.open {
+      right: 0;
+    }
+    #sideDrawer h2 {
+      margin-top: 0;
+      font-size: 1.4rem;
+    }
+    #sideDrawer label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    #sideDrawer input[type="color"],
+    #sideDrawer input[type="text"],
+    #sideDrawer select {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+    #sideDrawer input[type="checkbox"] {
+      margin-right: 5px;
+    }
+    #sideDrawer button {
+      padding: 10px 15px;
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      width: 100%;
+      margin-top: 5px;
+    }
+    #sideDrawer button:hover {
+      background: #5a67d8;
+    }
+    /* Main App Container */
+    #app {
+      display: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 500px;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+    /* Header with Controls */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: inherit;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      font-size: 1.8rem;
+      text-shadow: 0 0 5px rgba(255,255,255,0.8);
+    }
+    .header-controls {
+      display: flex;
+      gap: 10px;
+    }
+    .menu-btn, #darkModeButton {
+      background: none;
+      border: none;
+      font-size: 1.8rem;
+      color: inherit;
+      cursor: pointer;
+    }
+    /* Scoreboard & Timer with Pause Button */
+    .scoreboard {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      align-items: center;
+      margin: 15px 0;
+      font-size: 1.1rem;
+      color: inherit;
+    }
+    #timer {
+      position: relative;
+    }
+    #pauseTimerButton {
+      border: none;
+      background: #667eea;
+      color: #fff;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1rem;
+      line-height: 30px;
+      text-align: center;
+      position: absolute;
+      top: -10px;
+      right: -40px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #pauseTimerButton:hover {
+      background: #5a67d8;
+    }
+    /* Turn Indicator */
+    #turnIndicator {
+      margin: 10px 0;
+      font-size: 1.2rem;
+      color: #fff;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+    /* Board & Cells */
+    .board {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 300px;
+      aspect-ratio: 1/1;
+    }
+    .cell {
+      background: var(--cell-bg, #fff);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      position: relative;
+    }
+    .cell:hover {
+      transform: scale(1.05);
+    }
+    /* Player Colors & Animations */
+    .cell.x span {
+      color: red;
+      animation: xAnimation 0.5s ease forwards;
+    }
+    .cell.o span {
+      color: blue;
+      animation: oAnimation 0.5s ease forwards;
+    }
+    @keyframes xAnimation {
+      from { transform: scale(0) rotate(0deg); opacity: 0; }
+      to { transform: scale(1) rotate(360deg); opacity: 1; }
+    }
+    @keyframes oAnimation {
+      from { transform: scale(0) rotate(0deg); opacity: 0; }
+      to { transform: scale(1) rotate(360deg); opacity: 1; }
+    }
+    /* Win Line */
+    #winLine {
+      position: absolute;
+      background: gold;
+      z-index: 2;
+      display: none;
+    }
+    /* Reset Button */
+    .reset-btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #e53e3e;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .reset-btn:hover {
+      background: #c53030;
+    }
+    /* Winner Popup */
+    #winnerPopup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      z-index: 100;
+      text-align: center;
+      transition: transform 0.3s ease;
+      width: 80%;
+      max-width: 400px;
+    }
+    #winnerPopup.show {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    #winnerPopup button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #winnerPopup button:hover {
+      background: #5a67d8;
+    }
+    /* Responsive Adjustments */
+    @media (max-width: 500px) {
+      .header h1 {
+        font-size: 1.5rem;
+      }
+      .menu-btn, #darkModeButton {
+        font-size: 1.5rem;
+      }
+      .cell {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Startup Modal -->
+  <div id="startupModal">
+    <h2>Welcome to Tic Tac Toe Masterpiece</h2>
+    <p>Choose Game Mode</p>
+    <button onclick="initGame('computer')">Play Against Computer</button>
+    <button onclick="initGame('player')">2 Player Match</button>
+  </div>
+
+  <!-- Side Drawer for Settings (10 features) -->
+  <div id="sideDrawer">
+    <h2>Settings</h2>
+    <label for="bgColor">Background Color</label>
+    <input type="color" id="bgColor" value="#deb887" />
+
+    <label for="cellColor">Cell Color</label>
+    <input type="color" id="cellColor" value="#ffffff" />
+
+    <label for="playerNameInput">Player Name</label>
+    <input type="text" id="playerNameInput" placeholder="Enter your name" />
+
+    <label for="difficultySelect">Difficulty Level</label>
+    <select id="difficultySelect">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard" selected>Hard</option>
+    </select>
+
+    <label for="soundToggle">Sound Effects</label>
+    <input type="checkbox" id="soundToggle" checked />
+
+    <label for="animationToggle">Animation Effects</label>
+    <input type="checkbox" id="animationToggle" checked />
+
+    <label for="boardTheme">Board Theme</label>
+    <select id="boardTheme">
+      <option value="wood" selected>Wood</option>
+      <option value="modern">Modern</option>
+      <option value="classic">Classic</option>
+    </select>
+
+    <label for="gridToggle">Grid Lines</label>
+    <input type="checkbox" id="gridToggle" checked />
+
+    <label for="cellBorder">Cell Border Style</label>
+    <select id="cellBorder">
+      <option value="rounded" selected>Rounded</option>
+      <option value="square">Square</option>
+      <option value="shadowed">Shadowed</option>
+    </select>
+
+    <button onclick="resetScores()">Reset Scores</button>
+    <button onclick="applySettings()">Apply Settings</button>
+    <button onclick="toggleDrawer()" style="margin-top: 10px;">Close</button>
+  </div>
+
+  <!-- Main App Container -->
+  <div id="app">
+    <div class="header">
+      <h1>Tic Tac Toe</h1>
+      <div class="header-controls">
+        <button class="menu-btn" onclick="toggleDrawer()">&#9776;</button>
+        <button id="darkModeButton" onclick="toggleDarkMode()">☾</button>
+      </div>
+    </div>
+    <div id="turnIndicator">X's Turn</div>
+    <div class="scoreboard">
+      <span id="scorePlayer">Player (X): 0</span>
+      <span id="scoreOpponent">Opponent (O): 0</span>
+      <span id="scoreDraw">Draws: 0</span>
+      <span id="timer">Time: 00:00</span>
+      <button id="pauseTimerButton" onclick="toggleTimerPauseUI()">⏸</button>
+    </div>
+    <div class="board" id="board">
+      <!-- 9 cells -->
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+      <!-- Win Line -->
+      <div id="winLine"></div>
+    </div>
+    <button class="reset-btn" onclick="resetGame()">Reset Game</button>
+  </div>
+
+  <!-- Winner Popup -->
+  <div id="winnerPopup">
+    <h2 id="winnerMessage"></h2>
+    <button onclick="closeWinnerPopup()">Play Again</button>
+  </div>
+
+  <script>
+    // Global Variables
+    let gameMode = '';            // 'computer' or 'player'
+    let currentTurn = 'X';        // X always starts
+    let boardState = Array(9).fill('');
+    let gameActive = true;
+    let timerInterval;
+    let elapsedTime = 0;
+    let isTimerPaused = false;
+    let score = { player: 0, opponent: 0, draw: 0 };
+    let difficulty = 'hard';      // default difficulty for computer mode
+    let soundEnabled = true;
+    let animationEnabled = true;
+
+    /* -------------------- Startup & Game Initialization -------------------- */
+    function initGame(mode) {
+      gameMode = mode;
+      difficulty = document.getElementById('difficultySelect').value || 'hard';
+      document.getElementById('startupModal').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      resetBoard();
+      startTimer();
+      updateTurnIndicator();
+    }
+
+    /* -------------------- Settings Drawer Functions -------------------- */
+    function toggleDrawer() {
+      document.getElementById('sideDrawer').classList.toggle('open');
+    }
+
+    // Apply settings from the side drawer
+    function applySettings() {
+      // Background & Cell colors
+      const bgColor = document.getElementById('bgColor').value;
+      const cellColor = document.getElementById('cellColor').value;
+      document.body.style.background = bgColor;
+      document.documentElement.style.setProperty('--cell-bg', cellColor);
+
+      // Player Name
+      const playerName = document.getElementById('playerNameInput').value || 'Player';
+      document.getElementById('scorePlayer').textContent = playerName + " (X): " + score.player;
+
+      // Difficulty Level
+      difficulty = document.getElementById('difficultySelect').value;
+
+      // Sound & Animation toggles
+      soundEnabled = document.getElementById('soundToggle').checked;
+      animationEnabled = document.getElementById('animationToggle').checked;
+
+      // Board Theme (simple demo: change board border)
+      const boardTheme = document.getElementById('boardTheme').value;
+      const board = document.getElementById('board');
+      if(boardTheme === 'modern'){
+        board.style.border = "2px solid #667eea";
+      } else if(boardTheme === 'classic'){
+        board.style.border = "2px solid #000";
+      } else {
+        board.style.border = "none";
+      }
+
+      // Grid Lines Visibility
+      const gridOn = document.getElementById('gridToggle').checked;
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.style.border = gridOn ? "1px solid #ccc" : "none";
+      });
+
+      // Cell Border Style
+      const cellBorder = document.getElementById('cellBorder').value;
+      document.querySelectorAll('.cell').forEach(cell => {
+        if(cellBorder === 'rounded'){
+          cell.style.borderRadius = "8px";
+          cell.style.boxShadow = "none";
+        } else if(cellBorder === 'square'){
+          cell.style.borderRadius = "0";
+          cell.style.boxShadow = "none";
+        } else if(cellBorder === 'shadowed'){
+          cell.style.borderRadius = "8px";
+          cell.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+        }
+      });
+
+      toggleDrawer();
+    }
+
+    // Reset Scores Functionality
+    function resetScores() {
+      score = { player: 0, opponent: 0, draw: 0 };
+      const playerName = document.getElementById('playerNameInput').value || 'Player';
+      document.getElementById('scorePlayer').textContent = playerName + " (X): " + score.player;
+      document.getElementById('scoreOpponent').textContent = "Opponent (O): " + score.opponent;
+      document.getElementById('scoreDraw').textContent = "Draws: " + score.draw;
+    }
+
+    /* -------------------- Dark Mode & Timer Pause Controls -------------------- */
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+    }
+
+    function toggleTimerPauseUI() {
+      if(isTimerPaused){
+        startTimer();
+        isTimerPaused = false;
+        document.getElementById('pauseTimerButton').textContent = "⏸";
+      } else {
+        clearInterval(timerInterval);
+        isTimerPaused = true;
+        document.getElementById('pauseTimerButton').textContent = "▶";
+      }
+    }
+
+    /* -------------------- Game Board Functions -------------------- */
+    function resetBoard() {
+      boardState = Array(9).fill('');
+      currentTurn = 'X';
+      gameActive = true;
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.innerHTML = '';
+        cell.classList.remove('x', 'o');
+      });
+      document.getElementById('winLine').style.display = 'none';
+    }
+
+    function resetGame() {
+      resetBoard();
+      clearInterval(timerInterval);
+      elapsedTime = 0;
+      document.getElementById('timer').textContent = 'Time: 00:00';
+      startTimer();
+      updateTurnIndicator();
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        elapsedTime++;
+        let minutes = Math.floor(elapsedTime / 60);
+        let seconds = elapsedTime % 60;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+        document.getElementById('timer').textContent = `Time: ${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    function updateTurnIndicator() {
+      document.getElementById('turnIndicator').textContent = currentTurn + "'s Turn";
+    }
+
+    /* -------------------- Handling Moves -------------------- */
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => handleCellClick(cell));
+    });
+
+    function handleCellClick(cell) {
+      const index = cell.getAttribute('data-index');
+      if(boardState[index] !== '' || !gameActive) return;
+      boardState[index] = currentTurn;
+      cell.classList.add(currentTurn.toLowerCase());
+      cell.innerHTML = `<span>${currentTurn}</span>`;
+      if(checkWin(currentTurn)){
+        drawWinLine(getWinCondition(currentTurn));
+        endGame(currentTurn);
+      } else if(boardState.every(c => c !== '')){
+        endGame('draw');
+      } else {
+        currentTurn = (currentTurn === 'X') ? 'O' : 'X';
+        updateTurnIndicator();
+        if(gameMode === 'computer' && currentTurn === 'O'){
+          setTimeout(computerMove, 500);
+        }
+      }
+    }
+
+    /* -------------------- Win Checking & Win Line Drawing -------------------- */
+    const winConditions = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function checkWin(player) {
+      return winConditions.some(cond => cond.every(i => boardState[i] === player));
+    }
+
+    function getWinCondition(player) {
+      return winConditions.find(cond => cond.every(i => boardState[i] === player));
+    }
+
+    function drawWinLine(condition) {
+      const winLine = document.getElementById('winLine');
+      winLine.style.display = 'block';
+      // Reset styles
+      winLine.style.width = '';
+      winLine.style.height = '';
+      winLine.style.top = '';
+      winLine.style.left = '';
+      winLine.style.transform = '';
+      // Horizontal Wins
+      if(JSON.stringify(condition) === JSON.stringify([0,1,2])){
+        winLine.style.width = '100%';
+        winLine.style.height = '4px';
+        winLine.style.top = '16.67%';
+        winLine.style.left = '0';
+      } else if(JSON.stringify(condition) === JSON.stringify([3,4,5])){
+        winLine.style.width = '100%';
+        winLine.style.height = '4px';
+        winLine.style.top = '50%';
+        winLine.style.left = '0';
+      } else if(JSON.stringify(condition) === JSON.stringify([6,7,8])){
+        winLine.style.width = '100%';
+        winLine.style.height = '4px';
+        winLine.style.top = '83.33%';
+        winLine.style.left = '0';
+      }
+      // Vertical Wins
+      else if(JSON.stringify(condition) === JSON.stringify([0,3,6])){
+        winLine.style.width = '4px';
+        winLine.style.height = '100%';
+        winLine.style.left = '16.67%';
+        winLine.style.top = '0';
+      } else if(JSON.stringify(condition) === JSON.stringify([1,4,7])){
+        winLine.style.width = '4px';
+        winLine.style.height = '100%';
+        winLine.style.left = '50%';
+        winLine.style.top = '0';
+      } else if(JSON.stringify(condition) === JSON.stringify([2,5,8])){
+        winLine.style.width = '4px';
+        winLine.style.height = '100%';
+        winLine.style.left = '83.33%';
+        winLine.style.top = '0';
+      }
+      // Diagonals
+      else if(JSON.stringify(condition) === JSON.stringify([0,4,8])){
+        winLine.style.width = '141.42%';
+        winLine.style.height = '4px';
+        winLine.style.top = '50%';
+        winLine.style.left = '50%';
+        winLine.style.transform = 'translate(-50%, -50%) rotate(45deg)';
+      } else if(JSON.stringify(condition) === JSON.stringify([2,4,6])){
+        winLine.style.width = '141.42%';
+        winLine.style.height = '4px';
+        winLine.style.top = '50%';
+        winLine.style.left = '50%';
+        winLine.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
+      }
+    }
+
+    /* -------------------- Ending Game -------------------- */
+    function endGame(result) {
+      gameActive = false;
+      clearInterval(timerInterval);
+      let message = '';
+      if(result === 'draw'){
+        message = "It's a Draw!";
+        score.draw++;
+        document.getElementById('scoreDraw').textContent = "Draws: " + score.draw;
+      } else {
+        message = result + " Wins!";
+        if(result === 'X'){
+          score.player++;
+        } else {
+          score.opponent++;
+        }
+        const playerName = document.getElementById('playerNameInput').value || 'Player';
+        document.getElementById('scorePlayer').textContent = playerName + " (X): " + score.player;
+        document.getElementById('scoreOpponent').textContent = "Opponent (O): " + score.opponent;
+      }
+      showWinnerPopup(message);
+    }
+
+    /* -------------------- Winner Popup -------------------- */
+    function showWinnerPopup(message) {
+      document.getElementById('winnerMessage').textContent = message;
+      document.getElementById('winnerPopup').classList.add('show');
+    }
+    function closeWinnerPopup() {
+      document.getElementById('winnerPopup').classList.remove('show');
+      resetGame();
+    }
+
+    /* -------------------- Computer AI Functions -------------------- */
+    // For computer mode, choose move based on difficulty
+    function computerMove() {
+      if(!gameActive) return;
+      let move;
+      if(difficulty === 'easy'){
+        move = randomMove();
+      } else if(difficulty === 'medium'){
+        move = (Math.random() < 0.7) ? bestMove() : randomMove();
+      } else {
+        move = bestMove();
+      }
+      if(move != null) {
+        const cell = document.querySelector(`.cell[data-index='${move}']`);
+        boardState[move] = 'O';
+        cell.classList.add('o');
+        cell.innerHTML = `<span>O</span>`;
+        if(checkWin('O')){
+          drawWinLine(getWinCondition('O'));
+          endGame('O');
+        } else if(boardState.every(c => c !== '')){
+          endGame('draw');
+        } else {
+          currentTurn = 'X';
+          updateTurnIndicator();
+        }
+      }
+    }
+
+    // Random available move
+    function randomMove() {
+      const avail = boardState.map((c, i) => c === '' ? i : null).filter(i => i !== null);
+      return avail[Math.floor(Math.random() * avail.length)];
+    }
+
+    // Best move using minimax algorithm
+    function bestMove() {
+      let best = minimax(boardState.slice(), 'O');
+      return best.index;
+    }
+
+    // Minimax algorithm for Tic Tac Toe
+    function minimax(newBoard, player) {
+      const availSpots = newBoard.reduce((acc, el, i) => { if(el === '') acc.push(i); return acc; }, []);
+      if(checkWinner(newBoard, 'X')) return { score: -10 };
+      else if(checkWinner(newBoard, 'O')) return { score: 10 };
+      else if(availSpots.length === 0) return { score: 0 };
+
+      let moves = [];
+      for(let i = 0; i < availSpots.length; i++){
+        let move = {};
+        move.index = availSpots[i];
+        newBoard[availSpots[i]] = player;
+
+        if(player === 'O'){
+          let result = minimax(newBoard, 'X');
+          move.score = result.score;
+        } else {
+          let result = minimax(newBoard, 'O');
+          move.score = result.score;
+        }
+        newBoard[availSpots[i]] = '';
+        moves.push(move);
+      }
+      let bestMove;
+      if(player === 'O'){
+        let bestScore = -Infinity;
+        for(let i = 0; i < moves.length; i++){
+          if(moves[i].score > bestScore){
+            bestScore = moves[i].score;
+            bestMove = moves[i];
+          }
+        }
+      } else {
+        let bestScore = Infinity;
+        for(let i = 0; i < moves.length; i++){
+          if(moves[i].score < bestScore){
+            bestScore = moves[i].score;
+            bestMove = moves[i];
+          }
+        }
+      }
+      return bestMove;
+    }
+
+    // Helper function for minimax: check winner on a board state array
+    function checkWinner(board, player) {
+      return winConditions.some(cond => cond.every(i => board[i] === player));
+    }
+  </script>
+</body>
+</html>
